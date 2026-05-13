@@ -4,7 +4,6 @@ import {
   CandlestickSeries,
   type IChartApi,
   type ISeriesApi,
-  type UTCTimestamp,
 } from "lightweight-charts";
 import type { Candle } from "@/lib/scanner.functions";
 
@@ -55,14 +54,16 @@ export function CandlestickChart({ candles, symbol }: Props) {
 
   useEffect(() => {
     if (!seriesRef.current || !chartRef.current) return;
-    const data = candles.map((c) => ({
-      time: c.time as UTCTimestamp,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }));
-    seriesRef.current.setData(data);
+    // Convert to business-day strings and dedupe so lightweight-charts gets
+    // strictly ascending, unique daily bars regardless of intraday timestamps.
+    const map = new Map<string, { time: string; open: number; high: number; low: number; close: number }>();
+    for (const c of candles) {
+      const d = new Date(c.time * 1000);
+      const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      map.set(day, { time: day, open: c.open, high: c.high, low: c.low, close: c.close });
+    }
+    const data = Array.from(map.values()).sort((a, b) => (a.time < b.time ? -1 : 1));
+    seriesRef.current.setData(data as never);
     chartRef.current.timeScale().fitContent();
   }, [candles, symbol]);
 
