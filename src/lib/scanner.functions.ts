@@ -21,7 +21,7 @@ export type Candle = {
 };
 
 type CacheEntry<T> = { at: number; data: T; version: number };
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
