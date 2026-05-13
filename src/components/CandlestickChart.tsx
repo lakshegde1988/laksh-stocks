@@ -4,7 +4,6 @@ import {
   CandlestickSeries,
   type IChartApi,
   type ISeriesApi,
-  type UTCTimestamp,
 } from "lightweight-charts";
 import type { Candle } from "@/lib/scanner.functions";
 
