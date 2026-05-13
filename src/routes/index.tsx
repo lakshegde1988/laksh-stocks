@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, RefreshCw, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Loader2, RefreshCw, TrendingUp } from "lucide-react";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { getChart, runScan, type ScanRow } from "@/lib/scanner.functions";
 import { cn } from "@/lib/utils";
@@ -77,10 +77,19 @@ function Index() {
   };
 
   const selectedRow = rows.find((r) => r.symbol === selected);
+  const selectedIndex = selected ? sortedRows.findIndex((r) => r.symbol === selected) : -1;
+
+  const goTo = (offset: number) => {
+    if (sortedRows.length === 0) return;
+    const base = selectedIndex >= 0 ? selectedIndex : 0;
+    const next = (base + offset + sortedRows.length) % sortedRows.length;
+    setSelected(sortedRows[next].symbol);
+    setMobileView("chart");
+  };
 
   return (
-    <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
+    <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between gap-3 px-4 py-3 lg:px-6">
           <div className="flex items-center gap-2 min-w-0">
             <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/10 text-primary">
@@ -126,12 +135,12 @@ function Index() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col lg:flex-row lg:overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col lg:flex-row lg:overflow-hidden">
         {/* Results panel */}
         <section
           className={cn(
-            "flex flex-col border-border/60 lg:w-[420px] lg:border-r lg:overflow-hidden",
-            mobileView === "list" ? "flex" : "hidden lg:flex",
+            "flex-col border-border/60 lg:flex lg:w-[420px] lg:border-r lg:min-h-0 lg:overflow-hidden",
+            mobileView === "list" ? "flex flex-1 min-h-0" : "hidden lg:flex",
           )}
         >
           <div className="hidden lg:flex items-center justify-between px-4 py-2 border-b border-border/60">
@@ -164,7 +173,7 @@ function Index() {
           )}
 
           {rows.length > 0 && (
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 min-h-0 overflow-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur">
                   <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -222,12 +231,12 @@ function Index() {
         {/* Chart panel */}
         <section
           className={cn(
-            "flex flex-1 flex-col min-h-[calc(100vh-97px)] lg:h-[calc(100vh-61px)] lg:min-h-0",
+            "flex-1 min-h-0 flex-col",
             mobileView === "chart" ? "flex" : "hidden lg:flex",
           )}
         >
           <ChartHeader row={selectedRow} symbol={selected} />
-          <div className="relative flex-1 min-h-[420px] px-2 pb-2 lg:min-h-0 lg:px-4 lg:pb-4">
+          <div className="relative flex-1 min-h-0 px-2 pb-2 lg:px-4 lg:pb-4">
             {scanQuery.isLoading && !selected && (
               <div className="absolute inset-0 grid place-items-center text-muted-foreground">
                 <div className="flex flex-col items-center gap-2 text-sm">
@@ -252,6 +261,39 @@ function Index() {
           </div>
         </section>
       </div>
+
+      {/* Fixed footer pagination */}
+      <footer className="shrink-0 border-t border-border/60 bg-background/90 backdrop-blur">
+        <div className="flex items-center justify-between gap-3 px-3 py-2 lg:px-6">
+          <button
+            onClick={() => goTo(-1)}
+            disabled={sortedRows.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Prev</span>
+          </button>
+          <div className="text-[11px] tabular-nums text-muted-foreground truncate">
+            {sortedRows.length > 0 && selectedIndex >= 0 ? (
+              <>
+                <span className="font-medium text-foreground">{selectedIndex + 1}</span>
+                <span> / {sortedRows.length}</span>
+                {selected && <span className="ml-2 text-foreground">{selected}</span>}
+              </>
+            ) : (
+              <span>No selection</span>
+            )}
+          </div>
+          <button
+            onClick={() => goTo(1)}
+            disabled={sortedRows.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40"
+          >
+            <span>Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </footer>
     </main>
   );
 }
