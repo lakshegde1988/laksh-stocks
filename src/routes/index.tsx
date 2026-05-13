@@ -222,12 +222,20 @@ function Index() {
         {/* Chart panel */}
         <section
           className={cn(
-            "flex flex-1 flex-col",
+            "flex flex-1 flex-col min-h-[calc(100vh-97px)] lg:h-[calc(100vh-61px)] lg:min-h-0",
             mobileView === "chart" ? "flex" : "hidden lg:flex",
           )}
         >
           <ChartHeader row={selectedRow} symbol={selected} />
-          <div className="relative flex-1 min-h-[340px] px-2 pb-2 lg:px-4 lg:pb-4">
+          <div className="relative flex-1 min-h-[420px] px-2 pb-2 lg:min-h-0 lg:px-4 lg:pb-4">
+            {scanQuery.isLoading && !selected && (
+              <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+                <div className="flex flex-col items-center gap-2 text-sm">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span>Loading first chart…</span>
+                </div>
+              </div>
+            )}
             {chartQuery.isLoading && (
               <div className="absolute inset-0 grid place-items-center text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
