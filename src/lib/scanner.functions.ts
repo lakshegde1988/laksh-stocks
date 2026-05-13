@@ -47,6 +47,12 @@ async function fetchSymbols(): Promise<string[]> {
   return Array.from(new Set(syms.filter(Boolean)));
 }
 
+// NSE symbols from the source list need a `.NS` suffix for Yahoo Finance.
+function toYahooSymbol(sym: string): string {
+  if (sym.includes(".")) return sym;
+  return `${sym}.NS`;
+}
+
 async function fetchYahooChart(
   symbol: string,
   range = "1y",
