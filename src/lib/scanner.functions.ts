@@ -21,6 +21,7 @@ export type Candle = {
 };
 
 type CacheEntry<T> = { at: number; data: T };
+const CACHE_VERSION = 2;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
@@ -116,7 +117,12 @@ async function mapWithConcurrency<T, R>(
 
 export const runScan = createServerFn({ method: "GET" }).handler(async () => {
   const now = Date.now();
-  if (scanCache.current && now - scanCache.current.at < SCAN_TTL) {
+  if (
+    scanCache.current &&
+    scanCache.current.version === CACHE_VERSION &&
+    scanCache.current.data.length > 0 &&
+    now - scanCache.current.at < SCAN_TTL
+  ) {
     return { rows: scanCache.current.data, cached: true };
   }
 
@@ -134,12 +140,12 @@ export const runScan = createServerFn({ method: "GET" }).handler(async () => {
     const pct = ((high - last) / high) * 100;
     if (pct >= 0 && pct <= 10) {
       rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct });
-      chartCache.set(sym, { at: now, data: candles });
+      chartCache.set(sym, { at: now, data: candles, version: CACHE_VERSION });
     }
   });
 
   rows.sort((a, b) => a.pctFromHigh - b.pctFromHigh);
-  scanCache.current = { at: now, data: rows };
+  if (rows.length > 0) scanCache.current = { at: now, data: rows, version: CACHE_VERSION };
   return { rows, cached: false };
 });
 
@@ -151,11 +157,11 @@ export const getChart = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const now = Date.now();
     const cached = chartCache.get(data.symbol);
-    if (cached && now - cached.at < CHART_TTL) {
+    if (cached && cached.version === CACHE_VERSION && cached.data.length > 0 && now - cached.at < CHART_TTL) {
       return { candles: cached.data };
     }
     const candles = await fetchYahooChart(toYahooSymbol(data.symbol), "1y", "1d");
     if (!candles) throw new Error("Failed to load chart");
-    chartCache.set(data.symbol, { at: now, data: candles });
+    chartCache.set(data.symbol, { at: now, data: candles, version: CACHE_VERSION });
     return { candles };
   });
