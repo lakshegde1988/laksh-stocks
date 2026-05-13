@@ -123,8 +123,9 @@ export const runScan = createServerFn({ method: "GET" }).handler(async () => {
   const symbols = await fetchSymbols();
 
   const rows: ScanRow[] = [];
-  await mapWithConcurrency(symbols, 25, async (sym) => {
-    const candles = await fetchYahooChart(sym, "1y", "1d");
+  await mapWithConcurrency(symbols, 20, async (sym) => {
+    const yahooSym = toYahooSymbol(sym);
+    const candles = await fetchYahooChart(yahooSym, "1y", "1d");
     if (!candles || candles.length < 5) return;
     let high = -Infinity;
     for (const c of candles) if (c.high > high) high = c.high;
@@ -133,7 +134,6 @@ export const runScan = createServerFn({ method: "GET" }).handler(async () => {
     const pct = ((high - last) / high) * 100;
     if (pct >= 0 && pct <= 10) {
       rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct });
-      // Cache the candles too so first chart load is instant
       chartCache.set(sym, { at: now, data: candles });
     }
   });
