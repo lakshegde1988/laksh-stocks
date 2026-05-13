@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, RefreshCw, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Loader2, RefreshCw, TrendingUp } from "lucide-react";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { getChart, runScan, type ScanRow } from "@/lib/scanner.functions";
 import { cn } from "@/lib/utils";
