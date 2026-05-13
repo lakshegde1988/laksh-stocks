@@ -154,7 +154,7 @@ export const getChart = createServerFn({ method: "GET" })
     if (cached && now - cached.at < CHART_TTL) {
       return { candles: cached.data };
     }
-    const candles = await fetchYahooChart(data.symbol, "1y", "1d");
+    const candles = await fetchYahooChart(toYahooSymbol(data.symbol), "1y", "1d");
     if (!candles) throw new Error("Failed to load chart");
     chartCache.set(data.symbol, { at: now, data: candles });
     return { candles };
