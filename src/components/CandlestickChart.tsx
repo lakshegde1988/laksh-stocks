@@ -35,6 +35,8 @@ export function CandlestickChart({ candles, symbol }: Props) {
       borderColor: "rgba(148,163,184,0.15)",
       timeVisible: false,
       rightOffset: 5,
+      barSpacing: 8,
+      minBarSpacing: 4,
     },
       crosshair: { mode: 1 },
     });
