@@ -229,7 +229,26 @@ function Index() {
         symbol={selected}
         loading={chartQuery.isLoading}
         candles={chartQuery.data?.candles ?? null}
+        onPrev={() => {
+          if (!selected || sortedRows.length === 0) return;
+          const i = sortedRows.findIndex((r) => r.symbol === selected);
+          const next = sortedRows[(i - 1 + sortedRows.length) % sortedRows.length];
+          setSelected(next.symbol);
+        }}
+        onNext={() => {
+          if (!selected || sortedRows.length === 0) return;
+          const i = sortedRows.findIndex((r) => r.symbol === selected);
+          const next = sortedRows[(i + 1) % sortedRows.length];
+          setSelected(next.symbol);
+        }}
+        position={
+          selected
+            ? sortedRows.findIndex((r) => r.symbol === selected) + 1
+            : 0
+        }
+        total={sortedRows.length}
       />
+
     </main>
   );
 }
