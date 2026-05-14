@@ -7,6 +7,8 @@ import {
   ArrowDownUp,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   RefreshCw,
   SlidersHorizontal,
