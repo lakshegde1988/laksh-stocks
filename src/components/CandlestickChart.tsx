@@ -30,8 +30,12 @@ export function CandlestickChart({ candles, symbol }: Props) {
         vertLines: { color: "rgba(148,163,184,0.08)" },
         horzLines: { color: "rgba(148,163,184,0.08)" },
       },
-      rightPriceScale: { borderColor: "rgba(148,163,184,0.15)" },
-      timeScale: { borderColor: "rgba(148,163,184,0.15)", timeVisible: false },
+    rightPriceScale: { borderColor: "rgba(148,163,184,0.15)" },
+    timeScale: {
+      borderColor: "rgba(148,163,184,0.15)",
+      timeVisible: false,
+      rightOffset: 5,
+    },
       crosshair: { mode: 1 },
     });
     const series = chart.addSeries(CandlestickSeries, {
