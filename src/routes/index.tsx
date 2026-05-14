@@ -384,6 +384,10 @@ function ChartSheet({
   symbol,
   loading,
   candles,
+  onPrev,
+  onNext,
+  position,
+  total,
 }: {
   open: boolean;
   onClose: () => void;
@@ -391,6 +395,10 @@ function ChartSheet({
   symbol: string | null;
   loading: boolean;
   candles: { time: number; open: number; high: number; low: number; close: number; volume: number }[] | null;
+  onPrev: () => void;
+  onNext: () => void;
+  position: number;
+  total: number;
 }) {
   // Lock body scroll when open
   useEffect(() => {
@@ -404,6 +412,7 @@ function ChartSheet({
 
   if (!open || !symbol) return null;
   const tone = row ? pctTone(row.pctFromHigh) : null;
+  const disabled = total <= 1;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-xl animate-in fade-in duration-150">
@@ -434,13 +443,36 @@ function ChartSheet({
           </div>
         )}
       </div>
-      <div className="relative flex-1 px-2 pb-4 pt-2">
+      <div className="relative flex-1 px-2 pt-2">
         {loading && (
           <div className="absolute inset-0 grid place-items-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           </div>
         )}
         {candles && <CandlestickChart candles={candles} symbol={symbol} />}
+      </div>
+      <div className="flex items-center justify-between gap-3 border-t border-border/50 bg-background/80 px-4 py-3 backdrop-blur">
+        <button
+          onClick={onPrev}
+          disabled={disabled}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foreground disabled:opacity-40"
+          aria-label="Previous stock"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Prev
+        </button>
+        <div className="text-[11px] tabular-nums text-muted-foreground">
+          {position} / {total}
+        </div>
+        <button
+          onClick={onNext}
+          disabled={disabled}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foreground disabled:opacity-40"
+          aria-label="Next stock"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
