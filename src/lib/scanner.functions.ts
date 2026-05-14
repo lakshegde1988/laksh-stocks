@@ -9,6 +9,7 @@ export type ScanRow = {
   lastClose: number;
   high52: number;
   pctFromHigh: number;
+  spark: number[];
 };
 
 export type Candle = {
@@ -21,7 +22,7 @@ export type Candle = {
 };
 
 type CacheEntry<T> = { at: number; data: T; version: number };
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
@@ -139,7 +140,8 @@ export const runScan = createServerFn({ method: "GET" }).handler(async () => {
     if (!isFinite(high) || !isFinite(last) || high <= 0) return;
     const pct = ((high - last) / high) * 100;
     if (pct >= 0 && pct <= 10) {
-      rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct });
+      const tail = candles.slice(-40).map((c) => c.close);
+      rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct, spark: tail });
       chartCache.set(sym, { at: now, data: candles, version: CACHE_VERSION });
     }
   });

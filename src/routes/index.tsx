@@ -1,9 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Loader2, RefreshCw, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowDownUp,
+  Check,
+  ChevronDown,
+  Loader2,
+  RefreshCw,
+  SlidersHorizontal,
+  TrendingUp,
+} from "lucide-react";
 import { CandlestickChart } from "@/components/CandlestickChart";
+import { Sparkline } from "@/components/Sparkline";
 import { getChart, runScan, type ScanRow } from "@/lib/scanner.functions";
 import { cn } from "@/lib/utils";
 
@@ -11,18 +21,32 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Near 52-Week High Scanner" },
+      { title: "52W High Scanner" },
       {
         name: "description",
         content:
-          "Mobile-first stock scanner finding tickers within 10% of their 52-week high, with interactive candlestick charts.",
+          "Mobile-first scanner for stocks trading near their 52-week highs, with a clean dark UI and instant charts.",
       },
     ],
   }),
 });
 
-type SortKey = "symbol" | "lastClose" | "high52" | "pctFromHigh";
+type SortKey = "pctFromHigh" | "symbol" | "lastClose";
 type SortDir = "asc" | "desc";
+type FilterKey = "all" | "strong" | "near" | "watch";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  pctFromHigh: "% Away",
+  symbol: "Symbol",
+  lastClose: "Price",
+};
+
+const FILTERS: { key: FilterKey; label: string; test: (r: ScanRow) => boolean }[] = [
+  { key: "all", label: "All", test: () => true },
+  { key: "strong", label: "Strong (0–3%)", test: (r) => r.pctFromHigh < 3 },
+  { key: "near", label: "Near (3–6%)", test: (r) => r.pctFromHigh >= 3 && r.pctFromHigh < 6 },
+  { key: "watch", label: "Watch (6–10%)", test: (r) => r.pctFromHigh >= 6 },
+];
 
 function Index() {
   const scanFn = useServerFn(runScan);
@@ -38,16 +62,19 @@ function Index() {
   const [selected, setSelected] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("pctFromHigh");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [mobileView, setMobileView] = useState<"list" | "chart">("list");
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
 
   const rows = scanQuery.data?.rows ?? [];
 
-  useEffect(() => {
-    if (!selected && rows.length > 0) setSelected(rows[0].symbol);
-  }, [rows, selected]);
+  const filteredRows = useMemo(() => {
+    const test = FILTERS.find((f) => f.key === filter)?.test ?? (() => true);
+    return rows.filter(test);
+  }, [rows, filter]);
 
   const sortedRows = useMemo(() => {
-    const copy = [...rows];
+    const copy = [...filteredRows];
     copy.sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
@@ -58,7 +85,7 @@ function Index() {
         : String(bv).localeCompare(String(av));
     });
     return copy;
-  }, [rows, sortKey, sortDir]);
+  }, [filteredRows, sortKey, sortDir]);
 
   const chartQuery = useQuery({
     queryKey: ["chart", selected],
@@ -68,293 +95,332 @@ function Index() {
     refetchOnWindowFocus: false,
   });
 
-  const toggleSort = (k: SortKey) => {
-    if (k === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(k);
-      setSortDir(k === "symbol" ? "asc" : "asc");
-    }
-  };
-
-  const selectedRow = rows.find((r) => r.symbol === selected);
-  const selectedIndex = selected ? sortedRows.findIndex((r) => r.symbol === selected) : -1;
-
-  const goTo = (offset: number) => {
-    if (sortedRows.length === 0) return;
-    const base = selectedIndex >= 0 ? selectedIndex : 0;
-    const next = (base + offset + sortedRows.length) % sortedRows.length;
-    setSelected(sortedRows[next].symbol);
-    setMobileView("chart");
-  };
+  const selectedRow = rows.find((r) => r.symbol === selected) ?? null;
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 lg:px-6">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/10 text-primary">
+    <main className="min-h-screen text-foreground">
+      {/* Sticky header */}
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 pt-4 pb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/20">
               <TrendingUp className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-semibold tracking-tight truncate">
-                52-Week High Scanner
+              <h1 className="text-[15px] font-semibold tracking-tight leading-tight truncate">
+                52W High Scanner
               </h1>
-              <p className="text-[11px] text-muted-foreground truncate">
-                Stocks within 10% of their yearly high
+              <p className="text-[11px] text-muted-foreground leading-tight truncate">
+                Stocks near their yearly highs
               </p>
             </div>
           </div>
           <button
             onClick={() => scanQuery.refetch()}
             disabled={scanQuery.isFetching}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-secondary/40 px-2.5 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+            aria-label="Refresh scan"
+            className="grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card/60 text-muted-foreground transition hover:text-foreground hover:bg-card disabled:opacity-50"
           >
-            <RefreshCw
-              className={cn("h-3.5 w-3.5", scanQuery.isFetching && "animate-spin")}
-            />
-            <span className="hidden sm:inline">Rescan</span>
+            <RefreshCw className={cn("h-4 w-4", scanQuery.isFetching && "animate-spin")} />
           </button>
         </div>
 
-        {/* Mobile tabs */}
-        <div className="flex border-t border-border/60 lg:hidden">
-          {(["list", "chart"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setMobileView(v)}
-              className={cn(
-                "flex-1 py-2 text-xs font-medium uppercase tracking-wide transition",
-                mobileView === v
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-muted-foreground border-b-2 border-transparent",
-              )}
-            >
-              {v === "list" ? `Results${rows.length ? ` (${rows.length})` : ""}` : "Chart"}
-            </button>
-          ))}
+        {/* Filter + Sort pills */}
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 pb-3">
+          <PillMenu
+            icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+            label={FILTERS.find((f) => f.key === filter)?.label ?? "Filter"}
+            open={filterOpen}
+            setOpen={(v) => {
+              setFilterOpen(v);
+              if (v) setSortOpen(false);
+            }}
+          >
+            {FILTERS.map((f) => (
+              <MenuItem
+                key={f.key}
+                active={filter === f.key}
+                onClick={() => {
+                  setFilter(f.key);
+                  setFilterOpen(false);
+                }}
+              >
+                {f.label}
+              </MenuItem>
+            ))}
+          </PillMenu>
+
+          <PillMenu
+            icon={<ArrowDownUp className="h-3.5 w-3.5" />}
+            label={`${SORT_LABELS[sortKey]} ${sortDir === "asc" ? "↑" : "↓"}`}
+            open={sortOpen}
+            setOpen={(v) => {
+              setSortOpen(v);
+              if (v) setFilterOpen(false);
+            }}
+          >
+            {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+              <MenuItem
+                key={k}
+                active={sortKey === k}
+                onClick={() => {
+                  if (sortKey === k) {
+                    setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                  } else {
+                    setSortKey(k);
+                    setSortDir(k === "symbol" ? "asc" : "asc");
+                  }
+                  setSortOpen(false);
+                }}
+              >
+                {SORT_LABELS[k]}
+              </MenuItem>
+            ))}
+          </PillMenu>
+
+          <div className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+            {scanQuery.isLoading ? "Scanning…" : `${sortedRows.length} results`}
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 flex-col lg:flex-row lg:overflow-hidden">
-        {/* Results panel */}
-        <section
-          className={cn(
-            "flex-col border-border/60 lg:flex lg:w-[420px] lg:border-r lg:min-h-0 lg:overflow-hidden",
-            mobileView === "list" ? "flex flex-1 min-h-0" : "hidden lg:flex",
-          )}
-        >
-          <div className="hidden lg:flex items-center justify-between px-4 py-2 border-b border-border/60">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">
-              Results {rows.length > 0 && `(${rows.length})`}
-            </span>
-            {scanQuery.data?.cached && (
-              <span className="text-[10px] text-muted-foreground">cached</span>
-            )}
+      {/* Card list */}
+      <div className="mx-auto max-w-2xl px-4 py-4 pb-10">
+        {scanQuery.isLoading && (
+          <div className="flex flex-col items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <p>Scanning the market…</p>
+            <p className="text-xs">First load can take a moment.</p>
           </div>
+        )}
 
-          {scanQuery.isLoading && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              <p>Scanning ~2,500 symbols…</p>
-              <p className="text-xs">First load can take a minute.</p>
-            </div>
-          )}
-
-          {scanQuery.isError && (
-            <div className="px-4 py-8 text-sm text-destructive">
-              Failed to run scan. Try again.
-            </div>
-          )}
-
-          {!scanQuery.isLoading && rows.length === 0 && !scanQuery.isError && (
-            <div className="px-4 py-8 text-sm text-muted-foreground">
-              No stocks within 10% of their 52-week high right now.
-            </div>
-          )}
-
-          {rows.length > 0 && (
-            <div className="flex-1 min-h-0 overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur">
-                  <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <Th label="Symbol" k="symbol" sortKey={sortKey} dir={sortDir} onClick={toggleSort} />
-                    <Th label="Last" k="lastClose" sortKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-                    <Th label="52W High" k="high52" sortKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-                    <Th label="% Off" k="pctFromHigh" sortKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedRows.map((row) => {
-                    const active = row.symbol === selected;
-                    return (
-                      <tr
-                        key={row.symbol}
-                        onClick={() => {
-                          setSelected(row.symbol);
-                          setMobileView("chart");
-                        }}
-                        className={cn(
-                          "cursor-pointer border-b border-border/40 transition-colors",
-                          active
-                            ? "bg-primary/10 text-foreground"
-                            : "hover:bg-secondary/40",
-                        )}
-                      >
-                        <td className="px-3 py-2.5 font-medium">{row.symbol}</td>
-                        <td className="px-3 py-2.5 text-right tabular-nums">
-                          {fmt(row.lastClose)}
-                        </td>
-                        <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
-                          {fmt(row.high52)}
-                        </td>
-                        <td
-                          className={cn(
-                            "px-3 py-2.5 text-right tabular-nums font-medium",
-                            row.pctFromHigh < 3
-                              ? "text-emerald-400"
-                              : row.pctFromHigh < 7
-                                ? "text-amber-400"
-                                : "text-orange-400",
-                          )}
-                        >
-                          {row.pctFromHigh.toFixed(2)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* Chart panel */}
-        <section
-          className={cn(
-            "flex-1 min-h-0 flex-col",
-            mobileView === "chart" ? "flex" : "hidden lg:flex",
-          )}
-        >
-          <ChartHeader row={selectedRow} symbol={selected} />
-          <div className="relative flex-1 min-h-0 px-2 pb-2 lg:px-4 lg:pb-4">
-            {scanQuery.isLoading && !selected && (
-              <div className="absolute inset-0 grid place-items-center text-muted-foreground">
-                <div className="flex flex-col items-center gap-2 text-sm">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <span>Loading first chart…</span>
-                </div>
-              </div>
-            )}
-            {chartQuery.isLoading && (
-              <div className="absolute inset-0 grid place-items-center text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div>
-            )}
-            {chartQuery.data && selected && (
-              <CandlestickChart candles={chartQuery.data.candles} symbol={selected} />
-            )}
-            {!selected && !scanQuery.isLoading && (
-              <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
-                Select a stock to view its chart.
-              </div>
-            )}
+        {scanQuery.isError && (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
+            Failed to run scan. Pull down to retry.
           </div>
-        </section>
+        )}
+
+        {!scanQuery.isLoading && rows.length === 0 && !scanQuery.isError && (
+          <div className="rounded-2xl border border-border/50 bg-card/40 px-4 py-10 text-center text-sm text-muted-foreground">
+            No stocks within 10% of their 52-week high right now.
+          </div>
+        )}
+
+        {sortedRows.length > 0 && (
+          <ul className="flex flex-col gap-2.5">
+            {sortedRows.map((row) => (
+              <StockCard
+                key={row.symbol}
+                row={row}
+                onClick={() => setSelected(row.symbol)}
+              />
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Fixed footer pagination */}
-      <footer className="shrink-0 border-t border-border/60 bg-background/90 backdrop-blur">
-        <div className="flex items-center justify-between gap-3 px-3 py-2 lg:px-6">
-          <button
-            onClick={() => goTo(-1)}
-            disabled={sortedRows.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span>Prev</span>
-          </button>
-          <div className="text-[11px] tabular-nums text-muted-foreground truncate">
-            {sortedRows.length > 0 && selectedIndex >= 0 ? (
-              <>
-                <span className="font-medium text-foreground">{selectedIndex + 1}</span>
-                <span> / {sortedRows.length}</span>
-                {selected && <span className="ml-2 text-foreground">{selected}</span>}
-              </>
-            ) : (
-              <span>No selection</span>
-            )}
-          </div>
-          <button
-            onClick={() => goTo(1)}
-            disabled={sortedRows.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary disabled:opacity-40"
-          >
-            <span>Next</span>
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </footer>
+      {/* Chart sheet */}
+      <ChartSheet
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        row={selectedRow}
+        symbol={selected}
+        loading={chartQuery.isLoading}
+        candles={chartQuery.data?.candles ?? null}
+      />
     </main>
   );
 }
 
-function Th({
-  label,
-  k,
-  sortKey,
-  dir,
-  onClick,
-  align = "left",
-}: {
-  label: string;
-  k: SortKey;
-  sortKey: SortKey;
-  dir: SortDir;
-  onClick: (k: SortKey) => void;
-  align?: "left" | "right";
-}) {
-  const active = sortKey === k;
+function StockCard({ row, onClick }: { row: ScanRow; onClick: () => void }) {
+  const tone = pctTone(row.pctFromHigh);
   return (
-    <th
-      className={cn(
-        "px-3 py-2 font-medium select-none cursor-pointer hover:text-foreground",
-        align === "right" && "text-right",
-      )}
-      onClick={() => onClick(k)}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {active &&
-          (dir === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          ))}
-      </span>
-    </th>
+    <li>
+      <button
+        onClick={onClick}
+        className="group w-full rounded-2xl border border-border/50 bg-card/70 p-4 text-left shadow-[var(--shadow-card)] backdrop-blur-sm transition active:scale-[0.985] hover:border-border hover:bg-card"
+      >
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold tracking-tight">
+              {row.symbol}
+            </div>
+            <div className="mt-0.5 text-sm tabular-nums text-foreground/90">
+              {fmt(row.lastClose)}
+            </div>
+            <div className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
+              52W High · {fmt(row.high52)}
+            </div>
+          </div>
+
+          <div className={cn("shrink-0", tone.spark)}>
+            <Sparkline data={row.spark} width={72} height={36} />
+          </div>
+
+          <div
+            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums text-white shadow-md"
+            style={{ background: tone.gradient }}
+          >
+            -{row.pctFromHigh.toFixed(2)}%
+          </div>
+        </div>
+      </button>
+    </li>
   );
 }
 
-function ChartHeader({ row, symbol }: { row?: ScanRow; symbol: string | null }) {
-  if (!symbol) return null;
+function pctTone(pct: number) {
+  if (pct < 3)
+    return {
+      gradient: "var(--gradient-good)",
+      spark: "text-emerald-400",
+    };
+  if (pct < 6)
+    return {
+      gradient: "var(--gradient-warn)",
+      spark: "text-amber-400",
+    };
+  return {
+    gradient: "var(--gradient-bad)",
+    spark: "text-rose-400/80",
+  };
+}
+
+function PillMenu({
+  icon,
+  label,
+  open,
+  setOpen,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open, setOpen]);
+
   return (
-    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-border/60 px-4 py-3">
-      <h2 className="text-lg font-semibold tracking-tight">{symbol}</h2>
-      {row && (
-        <>
-          <span className="text-sm tabular-nums">
-            <span className="text-muted-foreground">Last </span>
-            {fmt(row.lastClose)}
-          </span>
-          <span className="text-sm tabular-nums">
-            <span className="text-muted-foreground">52W High </span>
-            {fmt(row.high52)}
-          </span>
-          <span className="text-sm tabular-nums text-emerald-400">
-            -{row.pctFromHigh.toFixed(2)}% off high
-          </span>
-        </>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+          open
+            ? "border-primary/40 bg-primary/15 text-primary"
+            : "border-border/60 bg-card/60 text-foreground/80 hover:bg-card hover:text-foreground",
+        )}
+      >
+        {icon}
+        <span>{label}</span>
+        <ChevronDown className={cn("h-3 w-3 transition", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] overflow-hidden rounded-xl border border-border/60 bg-popover/95 p-1 shadow-xl backdrop-blur">
+          {children}
+        </div>
       )}
+    </div>
+  );
+}
+
+function MenuItem({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
+        active ? "bg-primary/15 text-primary" : "text-foreground/85 hover:bg-secondary/60",
+      )}
+    >
+      <span>{children}</span>
+      {active && <Check className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
+
+function ChartSheet({
+  open,
+  onClose,
+  row,
+  symbol,
+  loading,
+  candles,
+}: {
+  open: boolean;
+  onClose: () => void;
+  row: ScanRow | null;
+  symbol: string | null;
+  loading: boolean;
+  candles: { time: number; open: number; high: number; low: number; close: number; volume: number }[] | null;
+}) {
+  // Lock body scroll when open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  if (!open || !symbol) return null;
+  const tone = row ? pctTone(row.pctFromHigh) : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-xl animate-in fade-in duration-150">
+      <div className="flex items-center gap-3 border-b border-border/50 px-4 py-3">
+        <button
+          onClick={onClose}
+          aria-label="Back"
+          className="grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold tracking-tight">{symbol}</div>
+          {row && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
+              <span>{fmt(row.lastClose)}</span>
+              <span>·</span>
+              <span>52W {fmt(row.high52)}</span>
+            </div>
+          )}
+        </div>
+        {row && tone && (
+          <div
+            className="rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-md tabular-nums"
+            style={{ background: tone.gradient }}
+          >
+            -{row.pctFromHigh.toFixed(2)}%
+          </div>
+        )}
+      </div>
+      <div className="relative flex-1 px-2 pb-4 pt-2">
+        {loading && (
+          <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        )}
+        {candles && <CandlestickChart candles={candles} symbol={symbol} />}
+      </div>
     </div>
   );
 }
