@@ -100,8 +100,8 @@ function Index() {
   }, [filteredRows, sortKey, sortDir]);
 
   const chartQuery = useQuery({
-    queryKey: ["chart", selected],
-    queryFn: () => chartFn({ data: { symbol: selected! } }),
+    queryKey: ["chart", selected, range],
+    queryFn: () => chartFn({ data: { symbol: selected!, range } }),
     enabled: !!selected,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
