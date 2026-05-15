@@ -151,19 +151,27 @@ export const runScan = createServerFn({ method: "GET" }).handler(async () => {
   return { rows, cached: false };
 });
 
+const VALID_RANGES = ["3mo", "6mo", "1y", "2y", "5y"] as const;
+type Range = (typeof VALID_RANGES)[number];
+
 export const getChart = createServerFn({ method: "GET" })
-  .inputValidator((d: { symbol: string }) => {
+  .inputValidator((d: { symbol: string; range?: string }) => {
     if (!d?.symbol || typeof d.symbol !== "string") throw new Error("symbol required");
-    return { symbol: d.symbol };
+    const range = (VALID_RANGES as readonly string[]).includes(d.range ?? "")
+      ? (d.range as Range)
+      : ("1y" as Range);
+    return { symbol: d.symbol, range };
   })
   .handler(async ({ data }) => {
+    const interval = data.range === "2y" || data.range === "5y" ? "1wk" : "1d";
+    const key = `${data.symbol}|${data.range}|${interval}`;
     const now = Date.now();
-    const cached = chartCache.get(data.symbol);
+    const cached = chartCache.get(key);
     if (cached && cached.version === CACHE_VERSION && cached.data.length > 0 && now - cached.at < CHART_TTL) {
       return { candles: cached.data };
     }
-    const candles = await fetchYahooChart(toYahooSymbol(data.symbol), "1y", "1d");
+    const candles = await fetchYahooChart(toYahooSymbol(data.symbol), data.range, interval);
     if (!candles) throw new Error("Failed to load chart");
-    chartCache.set(data.symbol, { at: now, data: candles, version: CACHE_VERSION });
+    chartCache.set(key, { at: now, data: candles, version: CACHE_VERSION });
     return { candles };
   });
