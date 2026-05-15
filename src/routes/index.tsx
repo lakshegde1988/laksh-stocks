@@ -36,6 +36,15 @@ export const Route = createFileRoute("/")({
 type SortKey = "pctFromHigh" | "symbol" | "lastClose";
 type SortDir = "asc" | "desc";
 type FilterKey = "all" | "strong" | "near" | "watch";
+type ChartRange = "3mo" | "6mo" | "1y" | "2y" | "5y";
+
+const RANGES: { key: ChartRange; label: string }[] = [
+  { key: "3mo", label: "3M" },
+  { key: "6mo", label: "6M" },
+  { key: "1y", label: "1Y" },
+  { key: "2y", label: "2Y" },
+  { key: "5y", label: "5Y" },
+];
 
 const SORT_LABELS: Record<SortKey, string> = {
   pctFromHigh: "% Away",
