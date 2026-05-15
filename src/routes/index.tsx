@@ -400,6 +400,8 @@ function ChartSheet({
   onNext,
   position,
   total,
+  range,
+  onRangeChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -411,6 +413,8 @@ function ChartSheet({
   onNext: () => void;
   position: number;
   total: number;
+  range: ChartRange;
+  onRangeChange: (r: ChartRange) => void;
 }) {
   // Lock body scroll when open
   useEffect(() => {
