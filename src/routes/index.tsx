@@ -36,6 +36,15 @@ export const Route = createFileRoute("/")({
 type SortKey = "pctFromHigh" | "symbol" | "lastClose";
 type SortDir = "asc" | "desc";
 type FilterKey = "all" | "strong" | "near" | "watch";
+type ChartRange = "3mo" | "6mo" | "1y" | "2y" | "5y";
+
+const RANGES: { key: ChartRange; label: string }[] = [
+  { key: "3mo", label: "3M" },
+  { key: "6mo", label: "6M" },
+  { key: "1y", label: "1Y" },
+  { key: "2y", label: "2Y" },
+  { key: "5y", label: "5Y" },
+];
 
 const SORT_LABELS: Record<SortKey, string> = {
   pctFromHigh: "% Away",
@@ -62,6 +71,7 @@ function Index() {
   });
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [range, setRange] = useState<ChartRange>("1y");
   const [sortKey, setSortKey] = useState<SortKey>("pctFromHigh");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -90,8 +100,8 @@ function Index() {
   }, [filteredRows, sortKey, sortDir]);
 
   const chartQuery = useQuery({
-    queryKey: ["chart", selected],
-    queryFn: () => chartFn({ data: { symbol: selected! } }),
+    queryKey: ["chart", selected, range],
+    queryFn: () => chartFn({ data: { symbol: selected!, range } }),
     enabled: !!selected,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -247,6 +257,8 @@ function Index() {
             : 0
         }
         total={sortedRows.length}
+        range={range}
+        onRangeChange={setRange}
       />
 
     </main>
@@ -388,6 +400,8 @@ function ChartSheet({
   onNext,
   position,
   total,
+  range,
+  onRangeChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -399,6 +413,8 @@ function ChartSheet({
   onNext: () => void;
   position: number;
   total: number;
+  range: ChartRange;
+  onRangeChange: (r: ChartRange) => void;
 }) {
   // Lock body scroll when open
   useEffect(() => {
@@ -442,6 +458,28 @@ function ChartSheet({
             -{row.pctFromHigh.toFixed(2)}%
           </div>
         )}
+      </div>
+      <div className="flex items-center gap-1.5 border-b border-border/50 px-3 py-2 overflow-x-auto">
+        {RANGES.map((r) => {
+          const active = r.key === range;
+          return (
+            <button
+              key={r.key}
+              onClick={() => onRangeChange(r.key)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold tabular-nums transition",
+                active
+                  ? "border-primary/40 bg-primary/15 text-primary"
+                  : "border-border/60 bg-card/60 text-foreground/75 hover:bg-card hover:text-foreground",
+              )}
+            >
+              {r.label}
+            </button>
+          );
+        })}
+        <span className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground">
+          {range === "2y" || range === "5y" ? "Weekly" : "Daily"}
+        </span>
       </div>
       <div className="relative flex-1 px-2 pt-2">
         {loading && (
