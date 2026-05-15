@@ -142,7 +142,7 @@ export const runScan = createServerFn({ method: "GET" }).handler(async () => {
     if (pct >= 0 && pct <= 10) {
       const tail = candles.slice(-40).map((c) => c.close);
       rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct, spark: tail });
-      chartCache.set(sym, { at: now, data: candles, version: CACHE_VERSION });
+      chartCache.set(`${sym}|1y|1d`, { at: now, data: candles, version: CACHE_VERSION });
     }
   });
 
