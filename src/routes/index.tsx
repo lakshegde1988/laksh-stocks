@@ -62,6 +62,7 @@ function Index() {
   });
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [range, setRange] = useState<ChartRange>("1y");
   const [sortKey, setSortKey] = useState<SortKey>("pctFromHigh");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<FilterKey>("all");
