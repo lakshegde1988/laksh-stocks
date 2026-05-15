@@ -74,8 +74,8 @@ export function CandlestickChart({ candles, symbol }: Props) {
     // High-volume highlight: volume >= 2x of 20-period SMA (prior 20 bars).
     const PERIOD = 20;
     const MULT = 2;
-    const HV_UP = "#00e5ff"; // bright cyan
-    const HV_DOWN = "#ffd400"; // vivid yellow
+    const HV_UP = "#ffd400"; // vivid yellow
+    const HV_DOWN = "#ff4fa3"; // pink
     const data = sorted.map((b, i) => {
       const start = Math.max(0, i - PERIOD);
       const slice = sorted.slice(start, i);
