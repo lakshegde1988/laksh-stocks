@@ -257,6 +257,8 @@ function Index() {
             : 0
         }
         total={sortedRows.length}
+        range={range}
+        onRangeChange={setRange}
       />
 
     </main>
