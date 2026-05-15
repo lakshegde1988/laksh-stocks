@@ -459,6 +459,28 @@ function ChartSheet({
           </div>
         )}
       </div>
+      <div className="flex items-center gap-1.5 border-b border-border/50 px-3 py-2 overflow-x-auto">
+        {RANGES.map((r) => {
+          const active = r.key === range;
+          return (
+            <button
+              key={r.key}
+              onClick={() => onRangeChange(r.key)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold tabular-nums transition",
+                active
+                  ? "border-primary/40 bg-primary/15 text-primary"
+                  : "border-border/60 bg-card/60 text-foreground/75 hover:bg-card hover:text-foreground",
+              )}
+            >
+              {r.label}
+            </button>
+          );
+        })}
+        <span className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground">
+          {range === "2y" || range === "5y" ? "Weekly" : "Daily"}
+        </span>
+      </div>
       <div className="relative flex-1 px-2 pt-2">
         {loading && (
           <div className="absolute inset-0 grid place-items-center text-muted-foreground">
