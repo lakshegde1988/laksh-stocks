@@ -36,15 +36,6 @@ export const Route = createFileRoute("/")({
 type SortKey = "pctFromHigh" | "symbol" | "lastClose";
 type SortDir = "asc" | "desc";
 type FilterKey = "all" | "strong" | "near" | "watch";
-type ChartRange = "3mo" | "6mo" | "1y" | "2y" | "5y";
-
-const RANGES: { key: ChartRange; label: string }[] = [
-  { key: "3mo", label: "3M" },
-  { key: "6mo", label: "6M" },
-  { key: "1y", label: "1Y" },
-  { key: "2y", label: "2Y" },
-  { key: "5y", label: "5Y" },
-];
 
 const SORT_LABELS: Record<SortKey, string> = {
   pctFromHigh: "% Away",
@@ -71,7 +62,6 @@ function Index() {
   });
 
   const [selected, setSelected] = useState<string | null>(null);
-  const [range, setRange] = useState<ChartRange>("1y");
   const [sortKey, setSortKey] = useState<SortKey>("pctFromHigh");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -100,8 +90,8 @@ function Index() {
   }, [filteredRows, sortKey, sortDir]);
 
   const chartQuery = useQuery({
-    queryKey: ["chart", selected, range],
-    queryFn: () => chartFn({ data: { symbol: selected!, range } }),
+    queryKey: ["chart", selected],
+    queryFn: () => chartFn({ data: { symbol: selected! } }),
     enabled: !!selected,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -257,8 +247,6 @@ function Index() {
             : 0
         }
         total={sortedRows.length}
-        range={range}
-        onRangeChange={setRange}
       />
 
     </main>
@@ -271,7 +259,7 @@ function StockCard({ row, onClick }: { row: ScanRow; onClick: () => void }) {
     <li>
       <button
         onClick={onClick}
-        className="group w-full rounded-2xl border border-border/50 bg-card/70 p-4 text-left shadow-[var(--shadow-card)] backdrop-blur-sm transition active:scale-[0.985] hover:border-border hover[...]
+        className="group w-full rounded-2xl border border-border/50 bg-card/70 p-4 text-left shadow-[var(--shadow-card)] backdrop-blur-sm transition active:scale-[0.985] hover:border-border hover:bg-card"
       >
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
@@ -400,8 +388,6 @@ function ChartSheet({
   onNext,
   position,
   total,
-  range,
-  onRangeChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -413,8 +399,6 @@ function ChartSheet({
   onNext: () => void;
   position: number;
   total: number;
-  range: ChartRange;
-  onRangeChange: (r: ChartRange) => void;
 }) {
   // Lock body scroll when open
   useEffect(() => {
@@ -459,9 +443,9 @@ function ChartSheet({
           </div>
         )}
       </div>
-      <div className="relative flex-1 px-2 pt-2 pb-2">
+      <div className="relative flex-1 px-2 pt-2">
         {loading && (
-          <div className="absolute inset-0 grid place-items-center text-muted-foreground z-10">
+          <div className="absolute inset-0 grid place-items-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           </div>
         )}
@@ -471,7 +455,7 @@ function ChartSheet({
         <button
           onClick={onPrev}
           disabled={disabled}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foregrou[...]
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foreground disabled:opacity-40"
           aria-label="Previous stock"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -483,7 +467,7 @@ function ChartSheet({
         <button
           onClick={onNext}
           disabled={disabled}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foregrou[...]
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foreground disabled:opacity-40"
           aria-label="Next stock"
         >
           Next
