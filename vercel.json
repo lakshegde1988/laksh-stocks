@@ -2,14 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
   "framework": "other",
-  "nodeVersion": "18.x",
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "dist/server/**/*.js": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
   }
 }
