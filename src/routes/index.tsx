@@ -271,7 +271,7 @@ function StockCard({ row, onClick }: { row: ScanRow; onClick: () => void }) {
     <li>
       <button
         onClick={onClick}
-        className="group w-full rounded-2xl border border-border/50 bg-card/70 p-4 text-left shadow-[var(--shadow-card)] backdrop-blur-sm transition active:scale-[0.985] hover:border-border hover:bg-card"
+        className="group w-full rounded-2xl border border-border/50 bg-card/70 p-4 text-left shadow-[var(--shadow-card)] backdrop-blur-sm transition active:scale-[0.985] hover:border-border hover[...]
       >
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
@@ -459,31 +459,9 @@ function ChartSheet({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1.5 border-b border-border/50 px-3 py-2 overflow-x-auto">
-        {RANGES.map((r) => {
-          const active = r.key === range;
-          return (
-            <button
-              key={r.key}
-              onClick={() => onRangeChange(r.key)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold tabular-nums transition",
-                active
-                  ? "border-primary/40 bg-primary/15 text-primary"
-                  : "border-border/60 bg-card/60 text-foreground/75 hover:bg-card hover:text-foreground",
-              )}
-            >
-              {r.label}
-            </button>
-          );
-        })}
-        <span className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground">
-          {range === "2y" || range === "5y" ? "Weekly" : "Daily"}
-        </span>
-      </div>
-      <div className="relative flex-1 px-2 pt-2">
+      <div className="relative flex-1 px-2 pt-2 pb-2">
         {loading && (
-          <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+          <div className="absolute inset-0 grid place-items-center text-muted-foreground z-10">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           </div>
         )}
@@ -493,7 +471,7 @@ function ChartSheet({
         <button
           onClick={onPrev}
           disabled={disabled}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foreground disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foregrou[...]
           aria-label="Previous stock"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -505,7 +483,7 @@ function ChartSheet({
         <button
           onClick={onNext}
           disabled={disabled}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foreground disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground/85 transition hover:bg-card hover:text-foregrou[...]
           aria-label="Next stock"
         >
           Next
