@@ -27,7 +27,6 @@ const CACHE_VERSION = 5;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
-const scanCache: { current?: CacheEntry<ScanRow[]> } = {};
 const chartCache = new Map<string, CacheEntry<Candle[]>>();
 
 const scanCaches: Record<Universe, { current?: CacheEntry<ScanRow[]> }> = {
