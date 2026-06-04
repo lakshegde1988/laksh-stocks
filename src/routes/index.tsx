@@ -43,6 +43,11 @@ const SORT_LABELS: Record<SortKey, string> = {
   lastClose: "Price",
 };
 
+const UNIVERSES: { key: Universe; label: string }[] = [
+  { key: "main", label: "All Stocks" },
+  { key: "ipo", label: "Recent IPOs" },
+];
+
 const FILTERS: { key: FilterKey; label: string; test: (r: ScanRow) => boolean }[] = [
   { key: "all", label: "All", test: () => true },
   { key: "strong", label: "Strong (0–3%)", test: (r) => r.pctFromHigh < 3 },
