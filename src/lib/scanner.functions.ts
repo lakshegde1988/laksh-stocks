@@ -30,8 +30,13 @@ const CHART_TTL = 5 * 60 * 1000;
 const scanCache: { current?: CacheEntry<ScanRow[]> } = {};
 const chartCache = new Map<string, CacheEntry<Candle[]>>();
 
-async function fetchSymbols(): Promise<string[]> {
-  const raw = symbolsData as unknown[];
+const scanCaches: Record<Universe, { current?: CacheEntry<ScanRow[]> }> = {
+  main: {},
+  ipo: {},
+};
+
+function fetchSymbols(universe: Universe): string[] {
+  const raw = (universe === "ipo" ? ipoData : symbolsData) as unknown[];
   const syms: string[] = [];
   for (const item of raw) {
     if (typeof item === "string") syms.push(item);
