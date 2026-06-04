@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { Sparkline } from "@/components/Sparkline";
-import { getChart, runScan, type ScanRow } from "@/lib/scanner.functions";
+import { getChart, runScan, type ScanRow, type Universe } from "@/lib/scanner.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -43,6 +43,11 @@ const SORT_LABELS: Record<SortKey, string> = {
   lastClose: "Price",
 };
 
+const UNIVERSES: { key: Universe; label: string }[] = [
+  { key: "main", label: "All Stocks" },
+  { key: "ipo", label: "Recent IPOs" },
+];
+
 const FILTERS: { key: FilterKey; label: string; test: (r: ScanRow) => boolean }[] = [
   { key: "all", label: "All", test: () => true },
   { key: "strong", label: "Strong (0–3%)", test: (r) => r.pctFromHigh < 3 },
@@ -54,9 +59,11 @@ function Index() {
   const scanFn = useServerFn(runScan);
   const chartFn = useServerFn(getChart);
 
+  const [universe, setUniverse] = useState<Universe>("main");
+
   const scanQuery = useQuery({
-    queryKey: ["scan"],
-    queryFn: () => scanFn(),
+    queryKey: ["scan", universe],
+    queryFn: () => scanFn({ data: { universe } }),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -67,6 +74,7 @@ function Index() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const [universeOpen, setUniverseOpen] = useState(false);
 
   const rows = scanQuery.data?.rows ?? [];
 
@@ -127,15 +135,45 @@ function Index() {
           </button>
         </div>
 
-        {/* Filter + Sort pills */}
+        {/* Universe + Filter + Sort pills */}
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 pb-3">
+          <PillMenu
+            icon={<TrendingUp className="h-3.5 w-3.5" />}
+            label={UNIVERSES.find((u) => u.key === universe)?.label ?? "Universe"}
+            open={universeOpen}
+            setOpen={(v) => {
+              setUniverseOpen(v);
+              if (v) {
+                setFilterOpen(false);
+                setSortOpen(false);
+              }
+            }}
+          >
+            {UNIVERSES.map((u) => (
+              <MenuItem
+                key={u.key}
+                active={universe === u.key}
+                onClick={() => {
+                  setUniverse(u.key);
+                  setSelected(null);
+                  setUniverseOpen(false);
+                }}
+              >
+                {u.label}
+              </MenuItem>
+            ))}
+          </PillMenu>
+
           <PillMenu
             icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
             label={FILTERS.find((f) => f.key === filter)?.label ?? "Filter"}
             open={filterOpen}
             setOpen={(v) => {
               setFilterOpen(v);
-              if (v) setSortOpen(false);
+              if (v) {
+                setSortOpen(false);
+                setUniverseOpen(false);
+              }
             }}
           >
             {FILTERS.map((f) => (
@@ -158,7 +196,10 @@ function Index() {
             open={sortOpen}
             setOpen={(v) => {
               setSortOpen(v);
-              if (v) setFilterOpen(false);
+              if (v) {
+                setFilterOpen(false);
+                setUniverseOpen(false);
+              }
             }}
           >
             {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (

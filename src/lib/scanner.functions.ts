@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import symbolsData from "@/data/symbols.json";
+import ipoData from "@/data/ipo.json";
+
+export type Universe = "main" | "ipo";
 
 export type ScanRow = {
   symbol: string;
@@ -24,11 +27,15 @@ const CACHE_VERSION = 5;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
-const scanCache: { current?: CacheEntry<ScanRow[]> } = {};
 const chartCache = new Map<string, CacheEntry<Candle[]>>();
 
-async function fetchSymbols(): Promise<string[]> {
-  const raw = symbolsData as unknown[];
+const scanCaches: Record<Universe, { current?: CacheEntry<ScanRow[]> }> = {
+  main: {},
+  ipo: {},
+};
+
+function fetchSymbols(universe: Universe): string[] {
+  const raw = (universe === "ipo" ? ipoData : symbolsData) as unknown[];
   const syms: string[] = [];
   for (const item of raw) {
     if (typeof item === "string") syms.push(item);
@@ -108,40 +115,47 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-export const runScan = createServerFn({ method: "GET" }).handler(async () => {
-  const now = Date.now();
-  if (
-    scanCache.current &&
-    scanCache.current.version === CACHE_VERSION &&
-    scanCache.current.data.length > 0 &&
-    now - scanCache.current.at < SCAN_TTL
-  ) {
-    return { rows: scanCache.current.data, cached: true };
-  }
-
-  const symbols = await fetchSymbols();
-
-  const rows: ScanRow[] = [];
-  await mapWithConcurrency(symbols, 20, async (sym) => {
-    const yahooSym = toYahooSymbol(sym);
-    const candles = await fetchYahooChart(yahooSym, "1y", "1d");
-    if (!candles || candles.length < 5) return;
-    let high = -Infinity;
-    for (const c of candles) if (c.high > high) high = c.high;
-    const last = candles[candles.length - 1].close;
-    if (!isFinite(high) || !isFinite(last) || high <= 0) return;
-    const pct = ((high - last) / high) * 100;
-    if (pct >= 0 && pct <= 10) {
-      const tail = candles.slice(-40).map((c) => c.close);
-      rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct, spark: tail });
-      chartCache.set(sym, { at: now, data: candles, version: CACHE_VERSION });
+export const runScan = createServerFn({ method: "GET" })
+  .inputValidator((d?: { universe?: Universe }): { universe: Universe } => {
+    const u = d?.universe === "ipo" ? "ipo" : "main";
+    return { universe: u };
+  })
+  .handler(async ({ data }) => {
+    const universe = data.universe;
+    const scanCache = scanCaches[universe];
+    const now = Date.now();
+    if (
+      scanCache.current &&
+      scanCache.current.version === CACHE_VERSION &&
+      scanCache.current.data.length > 0 &&
+      now - scanCache.current.at < SCAN_TTL
+    ) {
+      return { rows: scanCache.current.data, cached: true };
     }
-  });
 
-  rows.sort((a, b) => a.pctFromHigh - b.pctFromHigh);
-  if (rows.length > 0) scanCache.current = { at: now, data: rows, version: CACHE_VERSION };
-  return { rows, cached: false };
-});
+    const symbols = fetchSymbols(universe);
+
+    const rows: ScanRow[] = [];
+    await mapWithConcurrency(symbols, 20, async (sym) => {
+      const yahooSym = toYahooSymbol(sym);
+      const candles = await fetchYahooChart(yahooSym, "1y", "1d");
+      if (!candles || candles.length < 5) return;
+      let high = -Infinity;
+      for (const c of candles) if (c.high > high) high = c.high;
+      const last = candles[candles.length - 1].close;
+      if (!isFinite(high) || !isFinite(last) || high <= 0) return;
+      const pct = ((high - last) / high) * 100;
+      if (pct >= 0 && pct <= 10) {
+        const tail = candles.slice(-40).map((c) => c.close);
+        rows.push({ symbol: sym, lastClose: last, high52: high, pctFromHigh: pct, spark: tail });
+        chartCache.set(sym, { at: now, data: candles, version: CACHE_VERSION });
+      }
+    });
+
+    rows.sort((a, b) => a.pctFromHigh - b.pctFromHigh);
+    if (rows.length > 0) scanCache.current = { at: now, data: rows, version: CACHE_VERSION };
+    return { rows, cached: false };
+  });
 
 export const getChart = createServerFn({ method: "GET" })
   .inputValidator((d: { symbol: string }) => {
