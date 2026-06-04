@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-
-const SYMBOLS_URL =
-  "https://raw.githubusercontent.com/dotlaksh/dotchart/refs/heads/main/public/symbols.json";
+import symbolsData from "@/data/symbols.json";
 
 export type ScanRow = {
   symbol: string;
@@ -22,7 +20,7 @@ export type Candle = {
 };
 
 type CacheEntry<T> = { at: number; data: T; version: number };
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
@@ -30,13 +28,7 @@ const scanCache: { current?: CacheEntry<ScanRow[]> } = {};
 const chartCache = new Map<string, CacheEntry<Candle[]>>();
 
 async function fetchSymbols(): Promise<string[]> {
-  const res = await fetch(SYMBOLS_URL);
-  if (!res.ok) throw new Error("Failed to fetch symbols list");
-  const json = await res.json();
-  // Try to be flexible: array of strings, array of objects with symbol field, or object map
-  let raw: unknown[] = [];
-  if (Array.isArray(json)) raw = json;
-  else if (json && typeof json === "object") raw = Object.values(json as Record<string, unknown>);
+  const raw = symbolsData as unknown[];
   const syms: string[] = [];
   for (const item of raw) {
     if (typeof item === "string") syms.push(item);
