@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { Sparkline } from "@/components/Sparkline";
-import { getChart, runScan, type ScanRow } from "@/lib/scanner.functions";
+import { getChart, runScan, type ScanRow, type Universe } from "@/lib/scanner.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
