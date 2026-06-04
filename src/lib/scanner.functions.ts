@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import symbolsData from "@/data/symbols.json";
+import ipoData from "@/data/ipo.json";
+
+export type Universe = "main" | "ipo";
 
 export type ScanRow = {
   symbol: string;
