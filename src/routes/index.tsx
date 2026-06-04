@@ -59,9 +59,11 @@ function Index() {
   const scanFn = useServerFn(runScan);
   const chartFn = useServerFn(getChart);
 
+  const [universe, setUniverse] = useState<Universe>("main");
+
   const scanQuery = useQuery({
-    queryKey: ["scan"],
-    queryFn: () => scanFn(),
+    queryKey: ["scan", universe],
+    queryFn: () => scanFn({ data: { universe } }),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -72,6 +74,7 @@ function Index() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const [universeOpen, setUniverseOpen] = useState(false);
 
   const rows = scanQuery.data?.rows ?? [];
 
