@@ -135,15 +135,45 @@ function Index() {
           </button>
         </div>
 
-        {/* Filter + Sort pills */}
+        {/* Universe + Filter + Sort pills */}
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 pb-3">
+          <PillMenu
+            icon={<TrendingUp className="h-3.5 w-3.5" />}
+            label={UNIVERSES.find((u) => u.key === universe)?.label ?? "Universe"}
+            open={universeOpen}
+            setOpen={(v) => {
+              setUniverseOpen(v);
+              if (v) {
+                setFilterOpen(false);
+                setSortOpen(false);
+              }
+            }}
+          >
+            {UNIVERSES.map((u) => (
+              <MenuItem
+                key={u.key}
+                active={universe === u.key}
+                onClick={() => {
+                  setUniverse(u.key);
+                  setSelected(null);
+                  setUniverseOpen(false);
+                }}
+              >
+                {u.label}
+              </MenuItem>
+            ))}
+          </PillMenu>
+
           <PillMenu
             icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
             label={FILTERS.find((f) => f.key === filter)?.label ?? "Filter"}
             open={filterOpen}
             setOpen={(v) => {
               setFilterOpen(v);
-              if (v) setSortOpen(false);
+              if (v) {
+                setSortOpen(false);
+                setUniverseOpen(false);
+              }
             }}
           >
             {FILTERS.map((f) => (
