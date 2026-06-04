@@ -28,13 +28,7 @@ const scanCache: { current?: CacheEntry<ScanRow[]> } = {};
 const chartCache = new Map<string, CacheEntry<Candle[]>>();
 
 async function fetchSymbols(): Promise<string[]> {
-  const res = await fetch(SYMBOLS_URL);
-  if (!res.ok) throw new Error("Failed to fetch symbols list");
-  const json = await res.json();
-  // Try to be flexible: array of strings, array of objects with symbol field, or object map
-  let raw: unknown[] = [];
-  if (Array.isArray(json)) raw = json;
-  else if (json && typeof json === "object") raw = Object.values(json as Record<string, unknown>);
+  const raw = symbolsData as unknown[];
   const syms: string[] = [];
   for (const item of raw) {
     if (typeof item === "string") syms.push(item);
