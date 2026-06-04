@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-
-const SYMBOLS_URL =
-  "https://raw.githubusercontent.com/dotlaksh/dotchart/refs/heads/main/public/symbols.json";
+import symbolsData from "@/data/symbols.json";
 
 export type ScanRow = {
   symbol: string;
