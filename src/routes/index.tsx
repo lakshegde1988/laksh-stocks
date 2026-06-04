@@ -196,7 +196,10 @@ function Index() {
             open={sortOpen}
             setOpen={(v) => {
               setSortOpen(v);
-              if (v) setFilterOpen(false);
+              if (v) {
+                setFilterOpen(false);
+                setUniverseOpen(false);
+              }
             }}
           >
             {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
