@@ -23,7 +23,7 @@ export type Candle = {
 };
 
 type CacheEntry<T> = { at: number; data: T; version: number };
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 6;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
@@ -141,9 +141,17 @@ export const runScan = createServerFn({ method: "GET" })
       const candles = await fetchYahooChart(yahooSym, "1y", "1d");
       if (!candles || candles.length < 5) return;
       let high = -Infinity;
-      for (const c of candles) if (c.high > high) high = c.high;
+      let highIdx = -1;
+      for (let i = 0; i < candles.length; i++) {
+        if (candles[i].high > high) {
+          high = candles[i].high;
+          highIdx = i;
+        }
+      }
       const last = candles[candles.length - 1].close;
       if (!isFinite(high) || !isFinite(last) || high <= 0) return;
+      // Exclude stocks that made their 52-week high within the last 20 trading days.
+      if (candles.length - 1 - highIdx < 20) return;
       const pct = ((high - last) / high) * 100;
       if (pct >= 0 && pct <= 10) {
         const tail = candles.slice(-40).map((c) => c.close);
