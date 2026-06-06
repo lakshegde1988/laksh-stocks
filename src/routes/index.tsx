@@ -457,27 +457,27 @@ function ChartSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-xl animate-in fade-in duration-150">
-      <div className="flex items-center gap-3 px-3 py-2">
-        <button
-          onClick={onClose}
-          aria-label="Back"
-          className="grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="relative flex-1 px-2">
+      <div className="relative flex-1 px-2 pt-2">
         {/* In-chart info overlay */}
-        <div className="pointer-events-none absolute left-4 top-3 z-10 flex items-start justify-between gap-3 pr-4 w-[calc(100%-2rem)]">
-          <div className="min-w-0">
-            <div className="truncate text-[17px] font-semibold tracking-tight">{symbol}</div>
-            {row && (
-              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
-                <span>{fmt(row.lastClose)}</span>
-                <span>·</span>
-                <span>52W {fmt(row.high52)}</span>
-              </div>
-            )}
+        <div className="absolute left-4 top-3 z-10 flex items-start justify-between gap-3 pr-4 w-[calc(100%-2rem)]">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={onClose}
+              aria-label="Back"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground pointer-events-auto"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </button>
+            <div className="min-w-0">
+              <div className="truncate text-[17px] font-semibold tracking-tight">{symbol}</div>
+              {row && (
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
+                  <span>{fmt(row.lastClose)}</span>
+                  <span>·</span>
+                  <span>52W {fmt(row.high52)}</span>
+                </div>
+              )}
+            </div>
           </div>
           {row && tone && (
             <div
