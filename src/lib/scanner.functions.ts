@@ -23,7 +23,7 @@ export type Candle = {
 };
 
 type CacheEntry<T> = { at: number; data: T; version: number };
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const SCAN_TTL = 10 * 60 * 1000; // 10 min
 const CHART_TTL = 5 * 60 * 1000;
 
@@ -148,10 +148,13 @@ export const runScan = createServerFn({ method: "GET" })
           highIdx = i;
         }
       }
-      const last = candles[candles.length - 1].close;
+      const lastCandle = candles[candles.length - 1];
+      const last = lastCandle.close;
       if (!isFinite(high) || !isFinite(last) || high <= 0) return;
       // Exclude stocks that made their 52-week high within the last 20 trading days.
       if (candles.length - 1 - highIdx < 20) return;
+      // Exclude if the current day itself touches the 52-week high.
+      if (lastCandle.high >= high) return;
       const pct = ((high - last) / high) * 100;
       if (pct >= 0 && pct <= 10) {
         const tail = candles.slice(-40).map((c) => c.close);
