@@ -10,7 +10,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Rocket,
   RefreshCw,
+  Sparkles,
+  Layers,
   SlidersHorizontal,
   TrendingUp,
 } from "lucide-react";
@@ -27,7 +30,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Mobile-first scanner for stocks trading near their 52-week highs, with a clean dark UI and instant charts.",
+          "Pick a stock universe — Nifty 500, Microcap 250 or Recent IPOs — and scan for stocks trading near their 52-week highs.",
       },
     ],
   }),
@@ -43,9 +46,30 @@ const SORT_LABELS: Record<SortKey, string> = {
   lastClose: "Price",
 };
 
-const UNIVERSES: { key: Universe; label: string }[] = [
-  { key: "main", label: "All Stocks" },
-  { key: "ipo", label: "Recent IPOs" },
+const UNIVERSES: {
+  key: Universe;
+  label: string;
+  tagline: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    key: "nifty500",
+    label: "Nifty 500",
+    tagline: "India's 500 largest listed companies",
+    icon: <Layers className="h-5 w-5" />,
+  },
+  {
+    key: "microcaps",
+    label: "Microcap 250",
+    tagline: "Smaller, high-growth potential names",
+    icon: <TrendingUp className="h-5 w-5" />,
+  },
+  {
+    key: "ipo",
+    label: "Recent IPOs",
+    tagline: "Freshly listed companies",
+    icon: <Rocket className="h-5 w-5" />,
+  },
 ];
 
 const FILTERS: { key: FilterKey; label: string; test: (r: ScanRow) => boolean }[] = [
@@ -59,11 +83,13 @@ function Index() {
   const scanFn = useServerFn(runScan);
   const chartFn = useServerFn(getChart);
 
-  const [universe, setUniverse] = useState<Universe>("main");
+  // null = show the selection form; set = run the scan
+  const [universe, setUniverse] = useState<Universe | null>(null);
 
   const scanQuery = useQuery({
     queryKey: ["scan", universe],
-    queryFn: () => scanFn({ data: { universe } }),
+    queryFn: () => scanFn({ data: { universe: universe! } }),
+    enabled: !!universe,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -74,7 +100,6 @@ function Index() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [universeOpen, setUniverseOpen] = useState(false);
 
   const rows = scanQuery.data?.rows ?? [];
 
@@ -106,6 +131,12 @@ function Index() {
   });
 
   const selectedRow = rows.find((r) => r.symbol === selected) ?? null;
+  const activeUniverse = UNIVERSES.find((u) => u.key === universe);
+
+  // ---- Selection form (homepage) ----
+  if (!universe) {
+    return <UniverseForm onPick={(u) => setUniverse(u)} />;
+  }
 
   return (
     <main className="min-h-screen text-foreground">
@@ -113,12 +144,19 @@ function Index() {
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 pt-4 pb-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/20">
-              <TrendingUp className="h-4 w-4" />
-            </div>
+            <button
+              onClick={() => {
+                setUniverse(null);
+                setSelected(null);
+              }}
+              aria-label="Change universe"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/20 transition hover:bg-primary/25"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
             <div className="min-w-0">
               <h1 className="text-[15px] font-semibold tracking-tight leading-tight truncate">
-                52W High Scanner
+                {activeUniverse?.label ?? "Scanner"}
               </h1>
               <p className="text-[11px] text-muted-foreground leading-tight truncate">
                 Stocks near their yearly highs
@@ -135,45 +173,15 @@ function Index() {
           </button>
         </div>
 
-        {/* Universe + Filter + Sort pills */}
+        {/* Filter + Sort pills */}
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 pb-3">
-          <PillMenu
-            icon={<TrendingUp className="h-3.5 w-3.5" />}
-            label={UNIVERSES.find((u) => u.key === universe)?.label ?? "Universe"}
-            open={universeOpen}
-            setOpen={(v) => {
-              setUniverseOpen(v);
-              if (v) {
-                setFilterOpen(false);
-                setSortOpen(false);
-              }
-            }}
-          >
-            {UNIVERSES.map((u) => (
-              <MenuItem
-                key={u.key}
-                active={universe === u.key}
-                onClick={() => {
-                  setUniverse(u.key);
-                  setSelected(null);
-                  setUniverseOpen(false);
-                }}
-              >
-                {u.label}
-              </MenuItem>
-            ))}
-          </PillMenu>
-
           <PillMenu
             icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
             label={FILTERS.find((f) => f.key === filter)?.label ?? "Filter"}
             open={filterOpen}
             setOpen={(v) => {
               setFilterOpen(v);
-              if (v) {
-                setSortOpen(false);
-                setUniverseOpen(false);
-              }
+              if (v) setSortOpen(false);
             }}
           >
             {FILTERS.map((f) => (
@@ -196,10 +204,7 @@ function Index() {
             open={sortOpen}
             setOpen={(v) => {
               setSortOpen(v);
-              if (v) {
-                setFilterOpen(false);
-                setUniverseOpen(false);
-              }
+              if (v) setFilterOpen(false);
             }}
           >
             {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
@@ -232,7 +237,7 @@ function Index() {
         {scanQuery.isLoading && (
           <div className="flex flex-col items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <p>Scanning the market…</p>
+            <p>Scanning {activeUniverse?.label}…</p>
             <p className="text-xs">First load can take a moment.</p>
           </div>
         )}
@@ -289,7 +294,92 @@ function Index() {
         }
         total={sortedRows.length}
       />
+    </main>
+  );
+}
 
+function UniverseForm({ onPick }: { onPick: (u: Universe) => void }) {
+  const [choice, setChoice] = useState<Universe | null>(null);
+
+  return (
+    <main className="relative min-h-screen overflow-hidden text-foreground">
+      {/* Ambient glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-70"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 50% 0%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 70%)",
+        }}
+      />
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/25">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <h1 className="text-[26px] font-semibold tracking-tight leading-tight">
+            52W High Scanner
+          </h1>
+          <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+            Choose a stock universe to scan for names trading near their 52-week highs.
+          </p>
+        </div>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-1 px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Select universe
+          </legend>
+          {UNIVERSES.map((u) => {
+            const active = choice === u.key;
+            return (
+              <button
+                key={u.key}
+                type="button"
+                onClick={() => setChoice(u.key)}
+                className={cn(
+                  "group flex items-center gap-3.5 rounded-2xl border p-4 text-left transition active:scale-[0.99]",
+                  active
+                    ? "border-primary/50 bg-primary/10 ring-1 ring-primary/30"
+                    : "border-border/50 bg-card/60 hover:border-border hover:bg-card",
+                )}
+              >
+                <div
+                  className={cn(
+                    "grid h-11 w-11 shrink-0 place-items-center rounded-xl transition",
+                    active
+                      ? "bg-primary/20 text-primary"
+                      : "bg-secondary/60 text-muted-foreground group-hover:text-foreground",
+                  )}
+                >
+                  {u.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-semibold tracking-tight">{u.label}</div>
+                  <div className="mt-0.5 text-[12px] text-muted-foreground">{u.tagline}</div>
+                </div>
+                <div
+                  className={cn(
+                    "grid h-5 w-5 shrink-0 place-items-center rounded-full border transition",
+                    active ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                  )}
+                >
+                  {active && <Check className="h-3 w-3" />}
+                </div>
+              </button>
+            );
+          })}
+        </fieldset>
+
+        <button
+          type="button"
+          disabled={!choice}
+          onClick={() => choice && onPick(choice)}
+          className="mt-7 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg transition hover:opacity-90 active:scale-[0.99] disabled:opacity-40 disabled:active:scale-100"
+        >
+          <TrendingUp className="h-4 w-4" />
+          Run Scan
+        </button>
+      </div>
     </main>
   );
 }
