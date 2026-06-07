@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import symbolsData from "@/data/symbols.json";
+import nifty500Data from "@/data/nifty500.json";
+import microcapsData from "@/data/microcaps.json";
 import ipoData from "@/data/ipo.json";
 
-export type Universe = "main" | "ipo";
+export type Universe = "nifty500" | "microcaps" | "ipo";
 
 export type ScanRow = {
   symbol: string;
@@ -30,12 +31,17 @@ const CHART_TTL = 5 * 60 * 1000;
 const chartCache = new Map<string, CacheEntry<Candle[]>>();
 
 const scanCaches: Record<Universe, { current?: CacheEntry<ScanRow[]> }> = {
-  main: {},
+  nifty500: {},
+  microcaps: {},
   ipo: {},
 };
 
 function fetchSymbols(universe: Universe): string[] {
-  const raw = (universe === "ipo" ? ipoData : symbolsData) as unknown[];
+  const raw = (universe === "ipo"
+    ? ipoData
+    : universe === "microcaps"
+      ? microcapsData
+      : nifty500Data) as unknown[];
   const syms: string[] = [];
   for (const item of raw) {
     if (typeof item === "string") syms.push(item);
@@ -117,7 +123,8 @@ async function mapWithConcurrency<T, R>(
 
 export const runScan = createServerFn({ method: "GET" })
   .inputValidator((d?: { universe?: Universe }): { universe: Universe } => {
-    const u = d?.universe === "ipo" ? "ipo" : "main";
+    const valid: Universe[] = ["nifty500", "microcaps", "ipo"];
+    const u = valid.includes(d?.universe as Universe) ? (d!.universe as Universe) : "nifty500";
     return { universe: u };
   })
   .handler(async ({ data }) => {
