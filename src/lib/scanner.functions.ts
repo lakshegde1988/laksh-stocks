@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import symbolsData from "@/data/symbols.json";
+import nifty500Data from "@/data/nifty500.json";
+import microcapsData from "@/data/microcaps.json";
 import ipoData from "@/data/ipo.json";
 
-export type Universe = "main" | "ipo";
+export type Universe = "nifty500" | "microcaps" | "ipo";
 
 export type ScanRow = {
   symbol: string;
