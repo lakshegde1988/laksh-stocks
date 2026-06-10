@@ -16,9 +16,7 @@ interface Props {
 
 // Pivot level definitions: key, label, color.
 const PIVOT_LEVELS = [
-  { key: "r3", label: "R3", color: "#f87171" },
   { key: "p", label: "P", color: "#60a5fa" },
-  { key: "s3", label: "S3", color: "#22d3ee" },
 ] as const;
 
 type PivotKey = (typeof PIVOT_LEVELS)[number]["key"];
