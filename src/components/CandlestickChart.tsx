@@ -16,9 +16,7 @@ interface Props {
 
 // Pivot level definitions: key, label, color.
 const PIVOT_LEVELS = [
-  { key: "r3", label: "R3", color: "#f87171" },
   { key: "p", label: "P", color: "#60a5fa" },
-  { key: "s3", label: "S3", color: "#22d3ee" },
 ] as const;
 
 type PivotKey = (typeof PIVOT_LEVELS)[number]["key"];
@@ -145,14 +143,12 @@ export function CandlestickChart({ candles, symbol }: Props) {
       const p = (prev.high + prev.low + prev.close) / 3;
       pivotByMonth.set(monthOrder[i], {
         p,
-        r3: prev.high + 2 * (p - prev.low),
-        s3: prev.low - 2 * (prev.high - p),
       });
     }
 
     // Build per-day stepped lines so each month shows its own pivot levels.
     const lineData: Record<PivotKey, { time: string; value: number }[]> = {
-      p: [], r3: [], s3: [],
+      p: [],
     };
     for (const b of sorted) {
       const ym = b.time.slice(0, 7);
