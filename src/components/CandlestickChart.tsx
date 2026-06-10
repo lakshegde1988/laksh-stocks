@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import {
   createChart,
   CandlestickSeries,
+  LineSeries,
+  LineStyle,
   type IChartApi,
   type ISeriesApi,
 } from "lightweight-charts";
@@ -12,10 +14,24 @@ interface Props {
   symbol: string;
 }
 
+// Pivot level definitions: key, label, color.
+const PIVOT_LEVELS = [
+  { key: "r3", label: "R3", color: "#f87171" },
+  { key: "r2", label: "R2", color: "#fb923c" },
+  { key: "r1", label: "R1", color: "#fbbf24" },
+  { key: "p", label: "P", color: "#60a5fa" },
+  { key: "s1", label: "S1", color: "#4ade80" },
+  { key: "s2", label: "S2", color: "#34d399" },
+  { key: "s3", label: "S3", color: "#22d3ee" },
+] as const;
+
+type PivotKey = (typeof PIVOT_LEVELS)[number]["key"];
+
 export function CandlestickChart({ candles, symbol }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const pivotSeriesRef = useRef<Record<string, ISeriesApi<"Line">>>({});
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -51,10 +67,25 @@ export function CandlestickChart({ candles, symbol }: Props) {
     chartRef.current = chart;
     seriesRef.current = series;
 
+    const pivotSeries: Record<string, ISeriesApi<"Line">> = {};
+    for (const lvl of PIVOT_LEVELS) {
+      pivotSeries[lvl.key] = chart.addSeries(LineSeries, {
+        color: lvl.color,
+        lineWidth: 1,
+        lineStyle: lvl.key === "p" ? LineStyle.Solid : LineStyle.Dashed,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: false,
+        title: lvl.label,
+      });
+    }
+    pivotSeriesRef.current = pivotSeries;
+
     return () => {
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      pivotSeriesRef.current = {};
     };
   }, []);
 
@@ -92,6 +123,59 @@ export function CandlestickChart({ candles, symbol }: Props) {
       return { time: b.time, open: b.open, high: b.high, low: b.low, close: b.close };
     });
     seriesRef.current.setData(data as never);
+
+    // ---- Monthly pivot points ----
+    // Aggregate daily bars into months, computing each month's H/L/C.
+    type MonthAgg = { ym: string; high: number; low: number; close: number };
+    const monthsMap = new Map<string, MonthAgg>();
+    const monthOrder: string[] = [];
+    for (const b of sorted) {
+      const ym = b.time.slice(0, 7); // YYYY-MM
+      const agg = monthsMap.get(ym);
+      if (!agg) {
+        monthsMap.set(ym, { ym, high: b.high, low: b.low, close: b.close });
+        monthOrder.push(ym);
+      } else {
+        agg.high = Math.max(agg.high, b.high);
+        agg.low = Math.min(agg.low, b.low);
+        agg.close = b.close; // last close of the month
+      }
+    }
+
+    // Pivots for month N come from month N-1's HLC.
+    const pivotByMonth = new Map<string, Record<PivotKey, number>>();
+    for (let i = 1; i < monthOrder.length; i++) {
+      const prev = monthsMap.get(monthOrder[i - 1])!;
+      const p = (prev.high + prev.low + prev.close) / 3;
+      const range = prev.high - prev.low;
+      pivotByMonth.set(monthOrder[i], {
+        p,
+        r1: 2 * p - prev.low,
+        s1: 2 * p - prev.high,
+        r2: p + range,
+        s2: p - range,
+        r3: prev.high + 2 * (p - prev.low),
+        s3: prev.low - 2 * (prev.high - p),
+      });
+    }
+
+    // Build per-day stepped lines so each month shows its own pivot levels.
+    const lineData: Record<PivotKey, { time: string; value: number }[]> = {
+      p: [], r1: [], r2: [], r3: [], s1: [], s2: [], s3: [],
+    };
+    for (const b of sorted) {
+      const ym = b.time.slice(0, 7);
+      const pivots = pivotByMonth.get(ym);
+      if (!pivots) continue;
+      for (const lvl of PIVOT_LEVELS) {
+        lineData[lvl.key].push({ time: b.time, value: pivots[lvl.key] });
+      }
+    }
+    for (const lvl of PIVOT_LEVELS) {
+      const s = pivotSeriesRef.current[lvl.key];
+      if (s) s.setData(lineData[lvl.key] as never);
+    }
+
     chartRef.current.timeScale().fitContent();
   }, [candles, symbol]);
 
