@@ -143,14 +143,12 @@ export function CandlestickChart({ candles, symbol }: Props) {
       const p = (prev.high + prev.low + prev.close) / 3;
       pivotByMonth.set(monthOrder[i], {
         p,
-        r3: prev.high + 2 * (p - prev.low),
-        s3: prev.low - 2 * (prev.high - p),
       });
     }
 
     // Build per-day stepped lines so each month shows its own pivot levels.
     const lineData: Record<PivotKey, { time: string; value: number }[]> = {
-      p: [], r3: [], s3: [],
+      p: [],
     };
     for (const b of sorted) {
       const ym = b.time.slice(0, 7);
