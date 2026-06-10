@@ -143,7 +143,6 @@ export function CandlestickChart({ candles, symbol }: Props) {
     for (let i = 1; i < monthOrder.length; i++) {
       const prev = monthsMap.get(monthOrder[i - 1])!;
       const p = (prev.high + prev.low + prev.close) / 3;
-      const range = prev.high - prev.low;
       pivotByMonth.set(monthOrder[i], {
         p,
         r3: prev.high + 2 * (p - prev.low),
